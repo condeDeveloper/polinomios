@@ -1,0 +1,52 @@
+name: testes
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  testes:
+    runs-on: ${{ matrix.so }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        so: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      # O juiz e um TEOREMA: um polinomio nao nulo de grau d tem no maximo d
+      # raizes. Dai sai que dois polinomios que concordam em d+1 pontos distintos
+      # sao o MESMO polinomio, e que um ponto sorteado entre N valores pega uma
+      # diferenca com chance de pelo menos 1 - d/N.
+      #
+      # Comparar vetores de coeficientes diria que duas implementacoes fizeram a
+      # mesma coisa; avaliar nos pontos diz que as duas calcularam o POLINOMIO
+      # certo.
+      #
+      # Rodar em tres sistemas importa porque o gerador de sorteio e escrito
+      # aqui, e porque a transformada com numeros complexos depende de ponto
+      # flutuante: as contas com virgula sao as unicas do repositorio que podem
+      # diferir entre sistemas, e sao exatamente as que estao sendo acusadas.
+      - name: testes
+        run: dotnet test testes/Polinomios.Testes/Polinomios.Testes.csproj -c Release --nologo -v q
+
+      - name: o juiz, os tres metodos avaliados nos mesmos pontos
+        run: dotnet run --project ferramentas/Medidor/Medidor.csproj -c Release -- juiz
+
+      - name: multiplicacoes de coeficiente, nao segundos
+        run: dotnet run --project ferramentas/Medidor/Medidor.csproj -c Release -- custo
+
+      # A transformada com numeros complexos arredonda, e a partir de um tamanho
+      # ela erra sem avisar. Acima de 2^53 o proprio aviso para de funcionar.
+      - name: a transformada com virgula contra a exata
+        run: dotnet run --project ferramentas/Medidor/Medidor.csproj -c Release -- virgula
+
+      - name: o maximo divisor comum e os coeficientes explodindo
+        run: dotnet run --project ferramentas/Medidor/Medidor.csproj -c Release -- maximo
